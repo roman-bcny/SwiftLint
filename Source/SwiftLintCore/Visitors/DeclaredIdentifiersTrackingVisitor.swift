@@ -132,6 +132,19 @@ open class DeclaredIdentifiersTrackingVisitor<Configuration: RuleConfiguration>:
         }
     }
 
+    override open func visit(_ node: FunctionDeclSyntax) -> SyntaxVisitorContinueKind {
+        if node.parent?.is(MemberBlockItemSyntax.self) != true {
+            scope.addToCurrentScope(.localVariable(name: node.name))
+        }
+        return .visitChildren
+    }
+
+    override open func visitPost(_ node: FunctionDeclSyntax) {
+        if node.parent?.is(MemberBlockItemSyntax.self) != true {
+            scope.pop()
+        }
+    }
+
     // MARK: Private methods
 
     private func collectIdentifiers(from parameters: FunctionParameterListSyntax) {
