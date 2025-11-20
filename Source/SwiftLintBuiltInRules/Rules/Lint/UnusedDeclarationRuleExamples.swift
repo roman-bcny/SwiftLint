@@ -38,13 +38,6 @@ struct UnusedDeclarationRuleExamples {
         _ = ResponseModel(items: [Item()]).items
         """),
         Example("""
-        class ResponseModel {
-            @objc func foo() {
-            }
-        }
-        _ = ResponseModel()
-        """),
-        Example("""
         public func foo() {}
         """),
         Example("""
@@ -56,19 +49,6 @@ struct UnusedDeclarationRuleExamples {
 
         struct MyStruct: Foo {}
         MyStruct().bar()
-        """),
-        Example("""
-        import XCTest
-        class MyTests: XCTestCase {
-            func testExample() {}
-        }
-        """),
-        Example("""
-        import XCTest
-        open class BestTestCase: XCTestCase {}
-        class MyTests: BestTestCase {
-            func testExample() {}
-        }
         """),
         Example("""
             struct S {
@@ -276,6 +256,26 @@ struct UnusedDeclarationRuleExamples {
             @IBOutlet private var buzz: NSObject! {
                 didSet { print("didSet") }
             }
+        }
+        """),
+        Example("""
+        class ResponseModel {
+            @objc func foo() {
+            }
+        }
+        _ = ResponseModel()
+        """),
+        Example("""
+        import XCTest
+        class MyTests: XCTestCase {
+            func testExample() {}
+        }
+        """),
+        Example("""
+        import XCTest
+        open class BestTestCase: XCTestCase {}
+        class MyTests: BestTestCase {
+            func testExample() {}
         }
         """),
     ]

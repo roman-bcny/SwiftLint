@@ -180,6 +180,28 @@ struct UnusedImportRuleExamples {
             """),
         Example("""
         import Foundation
+        func bar() {}
+        """, configuration: [
+            "always_keep_imports": ["Foundation"]
+        ]):
+            Example("""
+            import Foundation
+            func bar() {}
+            """),
+        Example("""
+        ↓import Swift
+        ↓import SwiftShims
+        func foo(error: Swift.Error) {}
+        """):
+            Example("""
+            func foo(error: Swift.Error) {}
+            """),
+    ].merging(platformSpecificCorrections) { current, _ in current }
+
+#if os(macOS)
+    private static let platformSpecificCorrections: [Example: Example] = [
+        Example("""
+        import Foundation
         typealias Foo = CFArray
         dispatchMain()
         """, configuration: [
@@ -244,23 +266,8 @@ struct UnusedImportRuleExamples {
             @objc
             class A {}
             """),
-        Example("""
-        import Foundation
-        func bar() {}
-        """, configuration: [
-            "always_keep_imports": ["Foundation"]
-        ]):
-            Example("""
-            import Foundation
-            func bar() {}
-            """),
-        Example("""
-        ↓import Swift
-        ↓import SwiftShims
-        func foo(error: Swift.Error) {}
-        """):
-            Example("""
-            func foo(error: Swift.Error) {}
-            """),
     ]
+#else
+    private static let platformSpecificCorrections: [Example: Example] = [:]
+#endif
 }
