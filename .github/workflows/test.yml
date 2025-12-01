@@ -203,7 +203,13 @@ jobs:
         shell: powershell
         run: |
           .\monitor-wrapper.ps1 -Command "swift test --skip IntegrationTests --skip FileSystemAccessTests"
+      - name: Run BuiltInRulesTests
+        if: always()
+        shell: powershell
+        run: |
+          .\monitor-wrapper.ps1 -Command "swift test --filter BuiltInRulesTests"
       - name: Run all tests
+        if: always()
         shell: powershell
         run: |
           .\monitor-wrapper.ps1 -Command "swift test"
