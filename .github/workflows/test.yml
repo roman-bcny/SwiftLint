@@ -122,6 +122,17 @@ jobs:
               Write-Output "CPU Usage: $([math]::Round($cpu, 2))%"
               Write-Output "Memory: $usedGB GB / $totalGB GB"
               
+              # Disk Space
+              $disks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Where-Object { $_.Size -gt 0 }
+              if ($disks) {
+                Write-Output "Disk Space:"
+                $disks | ForEach-Object {
+                  $freeGB = [math]::Round($_.FreeSpace / 1GB, 2)
+                  $totalGB = [math]::Round($_.Size / 1GB, 2)
+                  Write-Output "  $($_.DeviceID) $freeGB GB / $totalGB GB"
+                }
+              }
+              
               Start-Sleep -Seconds 10
             }
           }
@@ -171,10 +182,14 @@ jobs:
           
           # Extract exit code and output
           $exitCode = 0
+          $foundExitCode = $false
           if ($finalCommandOutput) {
             foreach ($line in $finalCommandOutput) {
-              if ($line -match '^EXIT_CODE:(\d+)$') {
+              $lineStr = $line.ToString().Trim()
+              if ($lineStr -match 'EXIT_CODE:(\d+)') {
                 $exitCode = [int]$matches[1]
+                $foundExitCode = $true
+                Write-Output "=== Captured exit code: $exitCode ==="
               } else {
                 Write-Output $line
               }
@@ -185,6 +200,11 @@ jobs:
           Stop-Job $monitorJob -ErrorAction SilentlyContinue
           Remove-Job $monitorJob -ErrorAction SilentlyContinue
           Remove-Job $commandJob -ErrorAction SilentlyContinue
+          
+          if (-not $foundExitCode) {
+            Write-Output "=== WARNING: Could not find exit code in output, assuming failure ==="
+            $exitCode = 1
+          }
           
           Write-Output "`n=== Command exited with code: $exitCode ==="
           
