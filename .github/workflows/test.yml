@@ -86,8 +86,43 @@ jobs:
           key: windows-${{ matrix.windows-version }}-spm-${{ matrix.swift-version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
           restore-keys: windows-${{ matrix.windows-version }}-spm-${{ matrix.swift-version }}-
           path: .build
+      - name: Start monitoring
+        shell: powershell
+        run: |
+          $monitorScript = @'
+          while ($true) {
+            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            Write-Host "`n=== $timestamp ==="
+            
+            # Swift processes count grouped by name
+            $swiftProcs = Get-Process | Where-Object { $_.ProcessName -like "*swift*" } | Group-Object ProcessName
+            if ($swiftProcs) {
+              Write-Host "`nSwift Processes:"
+              $swiftProcs | ForEach-Object { Write-Host "  $($_.Name): $($_.Count)" }
+            } else {
+              Write-Host "`nSwift Processes: None"
+            }
+            
+            # CPU and Memory
+            $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
+            $mem = Get-CimInstance Win32_OperatingSystem
+            $usedGB = [math]::Round(($mem.TotalVisibleMemorySize - $mem.FreePhysicalMemory) / 1MB, 2)
+            $totalGB = [math]::Round($mem.TotalVisibleMemorySize / 1MB, 2)
+            
+            Write-Host "`nCPU Usage: $([math]::Round($cpu, 2))%"
+            Write-Host "Memory: $usedGB GB / $totalGB GB"
+            
+            Start-Sleep -Seconds 30
+          }
+          '@
+          $monitorScript | Out-File -FilePath monitor.ps1
+          Start-Process powershell -ArgumentList "-File monitor.ps1" -WindowStyle Hidden
       - name: Build all targets
         run: swift build --build-tests --vv --jobs 1
       - name: Run selected tests
         run: swift test --vv --skip IntegrationTests --skip FileSystemAccessTests
+      - name: Stop monitoring
+        if: always()
+        shell: powershell
+        run: Get-Process powershell | Where-Object { $_.CommandLine -like "*monitor.ps1*" } | Stop-Process -Force
       # To be extended with test execution and linting ...
