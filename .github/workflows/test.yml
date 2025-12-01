@@ -197,8 +197,14 @@ jobs:
         shell: powershell
         run: |
           .\monitor-wrapper.ps1 -Command "swift build --build-tests"
+      - name: List available tests
+        run: swift test list
       - name: Run selected tests
         shell: powershell
         run: |
           .\monitor-wrapper.ps1 -Command "swift test --skip IntegrationTests --skip FileSystemAccessTests"
+      - name: Run all tests
+        shell: powershell
+        run: |
+          .\monitor-wrapper.ps1 -Command "swift test"
       # To be extended with test execution and linting ...
