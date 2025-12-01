@@ -92,6 +92,9 @@ jobs:
           $wrapperScript = @'
           param([string]$Command)
           
+          # Capture current directory
+          $workDir = Get-Location
+          
           # Start monitoring in background
           $monitorJob = Start-Job -ScriptBlock {
             while ($true) {
@@ -120,12 +123,13 @@ jobs:
             }
           }
           
-          # Start command in background job
+          # Start command in background job with working directory
           $commandJob = Start-Job -ScriptBlock {
-            param([string]$Cmd)
+            param([string]$Cmd, [string]$WorkDir)
+            Set-Location $WorkDir
             Invoke-Expression "$Cmd 2>&1" | ForEach-Object { Write-Output $_ }
             return $LASTEXITCODE
-          } -ArgumentList $Command
+          } -ArgumentList $Command, $workDir.Path
           
           # Poll both jobs and show output as it comes
           while ($commandJob.State -eq 'Running') {
