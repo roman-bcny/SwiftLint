@@ -86,43 +86,75 @@ jobs:
           key: windows-${{ matrix.windows-version }}-spm-${{ matrix.swift-version }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
           restore-keys: windows-${{ matrix.windows-version }}-spm-${{ matrix.swift-version }}-
           path: .build
-      - name: Start monitoring
+      - name: Create monitoring wrapper script
         shell: powershell
         run: |
-          $monitorScript = @'
-          while ($true) {
-            $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-            Write-Host "`n=== $timestamp ==="
-            
-            # Swift processes count grouped by name
-            $swiftProcs = Get-Process | Where-Object { $_.ProcessName -like "*swift*" } | Group-Object ProcessName
-            if ($swiftProcs) {
-              Write-Host "`nSwift Processes:"
-              $swiftProcs | ForEach-Object { Write-Host "  $($_.Name): $($_.Count)" }
-            } else {
-              Write-Host "`nSwift Processes: None"
+          $wrapperScript = @'
+          param([string]$Command)
+          
+          # Start monitoring in background
+          $monitorJob = Start-Job -ScriptBlock {
+            while ($true) {
+              $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+              Write-Output "`n=== MONITOR $timestamp ==="
+              
+              # Swift processes count grouped by name
+              $swiftProcs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like "*swift*" } | Group-Object ProcessName
+              if ($swiftProcs) {
+                Write-Output "Swift Processes:"
+                $swiftProcs | ForEach-Object { Write-Output "  $($_.Name): $($_.Count)" }
+              } else {
+                Write-Output "Swift Processes: None"
+              }
+              
+              # CPU and Memory
+              $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
+              $mem = Get-CimInstance Win32_OperatingSystem
+              $usedGB = [math]::Round(($mem.TotalVisibleMemorySize - $mem.FreePhysicalMemory) / 1MB, 2)
+              $totalGB = [math]::Round($mem.TotalVisibleMemorySize / 1MB, 2)
+              
+              Write-Output "CPU Usage: $([math]::Round($cpu, 2))%"
+              Write-Output "Memory: $usedGB GB / $totalGB GB"
+              
+              Start-Sleep -Seconds 10
             }
-            
-            # CPU and Memory
-            $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
-            $mem = Get-CimInstance Win32_OperatingSystem
-            $usedGB = [math]::Round(($mem.TotalVisibleMemorySize - $mem.FreePhysicalMemory) / 1MB, 2)
-            $totalGB = [math]::Round($mem.TotalVisibleMemorySize / 1MB, 2)
-            
-            Write-Host "`nCPU Usage: $([math]::Round($cpu, 2))%"
-            Write-Host "Memory: $usedGB GB / $totalGB GB"
-            
-            Start-Sleep -Seconds 30
           }
+          
+          # Start command in background job
+          $commandJob = Start-Job -ScriptBlock {
+            param([string]$Cmd)
+            Invoke-Expression "$Cmd 2>&1" | ForEach-Object { Write-Output $_ }
+            return $LASTEXITCODE
+          } -ArgumentList $Command
+          
+          # Poll both jobs and show output as it comes
+          while ($commandJob.State -eq 'Running') {
+            Receive-Job $monitorJob
+            Receive-Job $commandJob
+            Start-Sleep -Milliseconds 500
+          }
+          
+          # Get remaining output
+          Receive-Job $monitorJob
+          Receive-Job $commandJob
+          
+          # Clean up
+          Stop-Job $monitorJob
+          Remove-Job $monitorJob
+          
+          # Get command exit code
+          $exitCode = Receive-Job $commandJob -Keep
+          Remove-Job $commandJob
+          
+          exit $exitCode
           '@
-          $monitorScript | Out-File -FilePath monitor.ps1
-          Start-Process powershell -ArgumentList "-File monitor.ps1" -WindowStyle Hidden
+          $wrapperScript | Out-File -FilePath monitor-wrapper.ps1 -Encoding UTF8
       - name: Build all targets
-        run: swift build --build-tests --vv --jobs 1
-      - name: Run selected tests
-        run: swift test --vv --skip IntegrationTests --skip FileSystemAccessTests
-      - name: Stop monitoring
-        if: always()
         shell: powershell
-        run: Get-Process powershell | Where-Object { $_.CommandLine -like "*monitor.ps1*" } | Stop-Process -Force
+        run: |
+          .\monitor-wrapper.ps1 -Command "swift build --build-tests"
+      - name: Run selected tests
+        shell: powershell
+        run: |
+          .\monitor-wrapper.ps1 -Command "swift test --skip IntegrationTests --skip FileSystemAccessTests"
       # To be extended with test execution and linting ...
