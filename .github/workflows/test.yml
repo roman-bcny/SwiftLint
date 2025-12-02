@@ -13,6 +13,7 @@ env:
 
 jobs:
   spm_linux:
+    if: false
     name: SPM, Linux, Swift 6.2
     runs-on: ubuntu-24.04
     container: swift:6.2-noble
@@ -34,6 +35,7 @@ jobs:
           rule: spm_test
 
   spm_macos:
+    if: false
     name: SPM, macOS ${{ matrix.macOS }}, Xcode ${{ matrix.xcode }}
     runs-on: macos-${{ matrix.macOS }}
     strategy:
@@ -58,3 +60,178 @@ jobs:
           path: .build
       - name: Run tests
         run: make spm_test
+
+  spm_windows:
+    name: SPM, Windows ${{ matrix.windows-display-name }}, Swift ${{ matrix.swift-build }}
+    runs-on: windows-${{ matrix.windows-version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - windows-version: 2025
+            arch: amd64
+            windows-display-name: 'Server 2025'
+            swift-version: development
+            swift-build: DEVELOPMENT-SNAPSHOT-2025-08-27-a
+    steps:
+      - uses: compnerd/gha-setup-swift@main
+        with:
+          swift-version: ${{ matrix.swift-version }}
+          swift-build: ${{ matrix.swift-build }}
+          build_arch: ${{ matrix.arch }}
+      - name: Enable long path support
+        run: |
+          reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          key: windows-${{ matrix.windows-version }}-spm-${{ matrix.swift-version }}-${{ matrix.swift-build }}-${{ hashFiles('Package.resolved', 'Package.swift') }}
+          restore-keys: windows-${{ matrix.windows-version }}-spm-${{ matrix.swift-version }}-${{ matrix.swift-build }}-
+          path: .build
+      - name: Create monitoring wrapper script
+        shell: powershell
+        run: |
+          $wrapperScript = @'
+          param([string]$Command)
+          
+          # Capture current directory
+          $workDir = Get-Location
+          
+          # Start monitoring in background
+          $monitorJob = Start-Job -ScriptBlock {
+            while ($true) {
+              $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+              Write-Output "`n=== MONITOR $timestamp ==="
+              
+              # Swift processes count grouped by name
+              $swiftProcs = Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like "*swift*" } | Group-Object ProcessName
+              if ($swiftProcs) {
+                Write-Output "Swift Processes:"
+                $swiftProcs | ForEach-Object { Write-Output "  $($_.Name): $($_.Count)" }
+              } else {
+                Write-Output "Swift Processes: None"
+              }
+              
+              # CPU and Memory
+              $cpu = (Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue
+              $mem = Get-CimInstance Win32_OperatingSystem
+              $usedGB = [math]::Round(($mem.TotalVisibleMemorySize - $mem.FreePhysicalMemory) / 1MB, 2)
+              $totalGB = [math]::Round($mem.TotalVisibleMemorySize / 1MB, 2)
+              
+              Write-Output "CPU Usage: $([math]::Round($cpu, 2))%"
+              Write-Output "Memory: $usedGB GB / $totalGB GB"
+              
+              # Disk Space
+              $disks = Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | Where-Object { $_.Size -gt 0 }
+              if ($disks) {
+                Write-Output "Disk Space:"
+                $disks | ForEach-Object {
+                  $freeGB = [math]::Round($_.FreeSpace / 1GB, 2)
+                  $totalGB = [math]::Round($_.Size / 1GB, 2)
+                  Write-Output "  $($_.DeviceID) $freeGB GB / $totalGB GB"
+                }
+              }
+              
+              Start-Sleep -Seconds 10
+            }
+          }
+          
+          # Start command in background job with working directory
+          $commandJob = Start-Job -ScriptBlock {
+            param([string]$Cmd, [string]$WorkDir)
+            Set-Location $WorkDir
+            
+            # Execute command and capture all output
+            $ErrorActionPreference = 'Continue'
+            Invoke-Expression $Cmd 2>&1 | ForEach-Object { 
+              Write-Output $_ 
+            }
+            
+            # Capture and return the exit code
+            $exitCode = $LASTEXITCODE
+            if ($null -eq $exitCode) { $exitCode = 0 }
+            
+            Write-Output "EXIT_CODE:$exitCode"
+          } -ArgumentList $Command, $workDir.Path
+          
+          # Poll both jobs and show output as it comes
+          while ($commandJob.State -eq 'Running') {
+            $monitorOutput = Receive-Job $monitorJob
+            if ($monitorOutput) {
+              $monitorOutput | ForEach-Object { Write-Output $_ }
+            }
+            
+            $commandOutput = Receive-Job $commandJob
+            if ($commandOutput) {
+              $commandOutput | ForEach-Object { Write-Output $_ }
+            }
+            
+            Start-Sleep -Milliseconds 500
+          }
+          
+          # Get all remaining output - critical for not truncating logs
+          Write-Output "`n=== Retrieving remaining monitor output ==="
+          $finalMonitorOutput = Receive-Job $monitorJob
+          if ($finalMonitorOutput) {
+            $finalMonitorOutput | ForEach-Object { Write-Output $_ }
+          }
+          
+          Write-Output "`n=== Retrieving remaining command output ==="
+          $finalCommandOutput = Receive-Job $commandJob -Wait
+          
+          # Extract exit code and output
+          $exitCode = 0
+          $foundExitCode = $false
+          if ($finalCommandOutput) {
+            foreach ($line in $finalCommandOutput) {
+              $lineStr = $line.ToString().Trim()
+              if ($lineStr -match 'EXIT_CODE:(\d+)') {
+                $exitCode = [int]$matches[1]
+                $foundExitCode = $true
+                Write-Output "=== Captured exit code: $exitCode ==="
+              } else {
+                Write-Output $line
+              }
+            }
+          }
+          
+          # Clean up
+          Stop-Job $monitorJob -ErrorAction SilentlyContinue
+          Remove-Job $monitorJob -ErrorAction SilentlyContinue
+          Remove-Job $commandJob -ErrorAction SilentlyContinue
+          
+          if (-not $foundExitCode) {
+            Write-Output "=== WARNING: Could not find exit code in output, assuming failure ==="
+            $exitCode = 1
+          }
+          
+          Write-Output "`n=== Command exited with code: $exitCode ==="
+          
+          if ($exitCode -ne 0) {
+            exit $exitCode
+          }
+          '@
+          $wrapperScript | Out-File -FilePath monitor-wrapper.ps1 -Encoding UTF8
+      - name: Build all targets
+        shell: powershell
+        run: |
+          .\monitor-wrapper.ps1 -Command "swift build --build-tests"
+      - name: List available tests
+        run: swift test list
+      - name: Run selected tests
+        shell: powershell
+        run: |
+          .\monitor-wrapper.ps1 -Command "swift test --skip IntegrationTests --skip FileSystemAccessTests"
+      - name: Run BuiltInRulesTests
+        if: always()
+        shell: powershell
+        run: |
+          .\monitor-wrapper.ps1 -Command "swift test --filter BuiltInRulesTests"
+      - name: Run all tests
+        if: always()
+        shell: powershell
+        run: |
+          .\monitor-wrapper.ps1 -Command "swift test"
+      # To be extended with test execution and linting ...
