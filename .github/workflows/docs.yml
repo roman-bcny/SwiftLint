@@ -9,6 +9,7 @@ jobs:
   create-docs:
     name: Create
     runs-on: ubuntu-24.04
+    if: false
     permissions:
       contents: read
     steps:

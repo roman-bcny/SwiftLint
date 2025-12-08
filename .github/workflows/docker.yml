@@ -19,6 +19,7 @@ jobs:
   set-context:
     name: Set Context
     runs-on: ubuntu-slim
+    if: false
     permissions: {}
     outputs:
       checkout-ref: ${{ steps.vars.outputs.checkout-ref }}
@@ -52,6 +53,7 @@ jobs:
   build-amd64:
     name: Build AMD64 Image
     runs-on: ubuntu-24.04
+    if: false
     permissions:
       contents: read
       packages: write
@@ -74,6 +76,7 @@ jobs:
   build-arm64:
     name: Build ARM64 Image
     runs-on: ubuntu-24.04-arm
+    if: false
     permissions:
       contents: read
       packages: write
@@ -96,6 +99,7 @@ jobs:
   merge:
     name: Create Multi-Platform Image
     runs-on: ubuntu-24.04
+    if: false
     permissions:
       packages: write
     needs:

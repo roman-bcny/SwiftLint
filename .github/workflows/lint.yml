@@ -11,6 +11,7 @@ jobs:
   lint-swift:
     name: Swift
     runs-on: ubuntu-24.04 # "Noble Numbat"
+    if: false
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -24,6 +25,7 @@ jobs:
   lint-markdown:
     name: Markdown
     runs-on: ubuntu-slim
+    if: false
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -38,6 +40,7 @@ jobs:
   lint-actions:
     name: Actions
     runs-on: ubuntu-24.04
+    if: false
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:

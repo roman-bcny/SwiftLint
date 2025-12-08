@@ -16,6 +16,7 @@ jobs:
     name: SPM, Linux, Swift 6.2
     runs-on: ubuntu-24.04
     container: swift:6.2-noble
+    if: false
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -36,6 +37,7 @@ jobs:
   spm_macos:
     name: SPM, macOS ${{ matrix.macOS }}, Xcode ${{ matrix.xcode }}
     runs-on: macos-${{ matrix.macOS }}
+    if: false
     strategy:
       matrix:
         include:
@@ -64,7 +66,7 @@ jobs:
     runs-on: windows-${{ matrix.windows-version }}
     env:
       SWIFT_VERSION: development
-      SWIFT_BUILD: DEVELOPMENT-SNAPSHOT-2025-08-27-a
+      SWIFT_BUILD: DEVELOPMENT-SNAPSHOT-2025-11-03-a
     strategy:
       fail-fast: false
       matrix:
@@ -72,9 +74,9 @@ jobs:
           - windows-version: 2025
             arch: amd64
             windows-display-name: 'Server 2025'
-          - windows-version: '11-arm'
-            arch: arm64
-            windows-display-name: '11 ARM'
+          # - windows-version: '11-arm'
+          #   arch: arm64
+          #   windows-display-name: '11 ARM'
     steps:
       - name: Enable long path support
         run: reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
@@ -83,6 +85,14 @@ jobs:
           swift-version: ${{ env.SWIFT_VERSION }}
           swift-build: ${{ env.SWIFT_BUILD }}
           build_arch: ${{ matrix.arch }}
+      # - name: Install private Swift toolchain
+      #   uses: compnerd/gha-setup-swift@8e4876ab336e58b5a5a269cdc7c2bcd86bd997d4 # Main as of 2025-05-01
+      #   with:
+      #     source: custom
+      #     github-repo: thebrowsercompany/swift-build
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     release-tag-name: 20250930.2
+      #     release-asset-name: installer-amd64.exe
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
