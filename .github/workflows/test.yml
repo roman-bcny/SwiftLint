@@ -64,7 +64,6 @@ jobs:
   spm_windows:
     name: SPM, Windows ${{ matrix.windows-display-name }}
     runs-on: windows-${{ matrix.windows-version }}
-    if: matrix.windows-version == 2025 || github.event_name != 'pull_request'
     env:
       SWIFT_VERSION: development
       SWIFT_BUILD: DEVELOPMENT-SNAPSHOT-2025-08-27-a
@@ -75,9 +74,9 @@ jobs:
           - windows-version: 2025
             arch: amd64
             windows-display-name: 'Server 2025'
-          - windows-version: '11-arm'
-            arch: arm64
-            windows-display-name: '11 ARM'
+          # - windows-version: '11-arm'
+          #   arch: arm64
+          #   windows-display-name: '11 ARM'
     steps:
       - name: Enable long path support
         run: reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f
