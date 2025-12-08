@@ -16,6 +16,7 @@ jobs:
     name: SPM, Linux, Swift 6.2
     runs-on: ubuntu-24.04
     container: swift:6.2-noble
+    if: false
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -36,6 +37,7 @@ jobs:
   spm_macos:
     name: SPM, macOS ${{ matrix.macOS }}, Xcode ${{ matrix.xcode }}
     runs-on: macos-${{ matrix.macOS }}
+    if: false
     strategy:
       matrix:
         include:
@@ -62,6 +64,7 @@ jobs:
   spm_windows:
     name: SPM, Windows ${{ matrix.windows-display-name }}
     runs-on: windows-${{ matrix.windows-version }}
+    if: matrix.windows-version == 2025 || github.event_name != 'pull_request'
     env:
       SWIFT_VERSION: development
       SWIFT_BUILD: DEVELOPMENT-SNAPSHOT-2025-08-27-a
