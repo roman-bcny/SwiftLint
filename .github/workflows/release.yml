@@ -19,6 +19,7 @@ env:
 
 jobs:
   setup-credentials:
+    if: false
     name: Setup Actor Credentials
     uses: ./.github/workflows/actor-credentials.yml
     with:
@@ -28,6 +29,7 @@ jobs:
     secrets: inherit
 
   prepare-release:
+    if: false
     name: Prepare Release
     runs-on: ubuntu-slim
     needs: setup-credentials
@@ -64,6 +66,7 @@ jobs:
           git push origin HEAD
 
   verify-podspec:
+    if: false
     name: Verify Podspec
     runs-on: macOS-14
     permissions:
@@ -88,6 +91,7 @@ jobs:
           make pod_lint
 
   build-linux:
+    if: false
     name: Build Linux ${{ matrix.arch }} Binary
     needs: prepare-release
     runs-on: ${{ matrix.runner }}
@@ -119,6 +123,7 @@ jobs:
           path: .build/release/swiftlint
 
   build-static-linux:
+    if: false
     name: Build Static Linux ${{ matrix.arch }} Binary
     needs: prepare-release
     runs-on: ${{ matrix.runner }}
@@ -182,6 +187,7 @@ jobs:
             LICENSE.mimalloc
 
   build-macos:
+    if: false
     name: Build macOS Binaries
     needs: prepare-release
     runs-on: macOS-26
@@ -206,6 +212,7 @@ jobs:
           if-no-files-found: error
 
   create-release:
+    if: false
     name: Create Release
     needs:
       - setup-credentials

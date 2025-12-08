@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   bazel_linux:
+    if: false
     name: Bazel, Linux, Swift 6.2 # pre-installed
     runs-on: ubuntu-24.04
     steps:
@@ -22,6 +23,7 @@ jobs:
           CI_BAZELRC_FILE_CONTENT: ${{ secrets.CI_BAZELRC_FILE_CONTENT }}
 
   plugins_linux:
+    if: false
     name: SPM plugins, Linux, Swift ${{ matrix.version }}
     runs-on: ubuntu-24.04
     strategy:

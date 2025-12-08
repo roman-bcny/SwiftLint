@@ -17,6 +17,7 @@ on:
 
 jobs:
   set-context:
+    if: false
     name: Set Context
     runs-on: ubuntu-slim
     permissions: {}
@@ -50,6 +51,7 @@ jobs:
         INPUTS_TAG: ${{ inputs.tag }}
 
   build-amd64:
+    if: false
     name: Build AMD64 Image
     runs-on: ubuntu-24.04
     permissions:
@@ -72,6 +74,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
   build-arm64:
+    if: false
     name: Build ARM64 Image
     runs-on: ubuntu-24.04-arm
     permissions:
@@ -94,6 +97,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
 
   merge:
+    if: false
     name: Create Multi-Platform Image
     runs-on: ubuntu-24.04
     permissions:
