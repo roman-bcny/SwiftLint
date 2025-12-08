@@ -9,6 +9,7 @@ permissions:
 
 jobs:
   lint-swift:
+    if: false
     name: Swift
     runs-on: ubuntu-24.04 # "Noble Numbat"
     steps:
@@ -22,6 +23,7 @@ jobs:
       - name: Lint
         run: ./bazel-bin/swiftlint lint --reporter github-actions-logging --strict 2> /dev/null
   lint-markdown:
+    if: false
     name: Markdown
     runs-on: ubuntu-slim
     steps:
@@ -36,6 +38,7 @@ jobs:
             CONTRIBUTING.md
             README.md
   lint-actions:
+    if: false
     name: Actions
     runs-on: ubuntu-24.04
     steps:

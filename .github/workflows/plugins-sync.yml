@@ -13,6 +13,7 @@ permissions:
 
 jobs:
   sync:
+    if: false
     name: Sync Plugins Folder
     runs-on: ubuntu-slim
     steps:

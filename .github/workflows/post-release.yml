@@ -6,6 +6,7 @@ on:
 
 jobs:
   setup-credentials:
+    if: false
     name: Setup Actor Credentials
     uses: ./.github/workflows/actor-credentials.yml
     with:
@@ -15,6 +16,7 @@ jobs:
     secrets: inherit
 
   merge-into-main:
+    if: false
     name: Merge into main
     needs: setup-credentials
     runs-on: ubuntu-slim
@@ -40,6 +42,7 @@ jobs:
           TAG_NAME: ${{ github.event.release.tag_name }}
 
   publish-pod:
+    if: false
     name: Publish Pod
     needs:
       - merge-into-main
@@ -59,6 +62,7 @@ jobs:
           COCOAPODS_TRUNK_TOKEN: ${{ secrets[format('COCOAPODS_TRUNK_TOKEN_{0}', needs.setup-credentials.outputs.author_uppercase)] }}
 
   dispatch-plugins:
+    if: false
     name: Dispatch Plugins Repository
     needs: merge-into-main
     runs-on: ubuntu-slim
@@ -87,6 +91,7 @@ jobs:
             }
 
   bump-homebrew:
+    if: false
     name: Bump Homebrew Formula
     needs:
       - merge-into-main
@@ -110,6 +115,7 @@ jobs:
           formulae: swiftlint
 
   build-docker:
+    if: false
     name: Build Docker Images
     needs: merge-into-main
     uses: ./.github/workflows/docker.yml

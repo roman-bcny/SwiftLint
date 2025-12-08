@@ -9,6 +9,7 @@ on:
 jobs:
   # The job MUST be called `copilot-setup-steps` or it will not be picked up by Copilot.
   copilot-setup-steps:
+    if: false
     name: Perform
     runs-on: ubuntu-24.04
     # Swift containers don't work with Copilot
